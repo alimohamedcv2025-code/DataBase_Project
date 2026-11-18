@@ -1,0 +1,59 @@
+digraph StudentAttendance {
+    graph [
+        rankdir=LR, bgcolor="#F4F7FB", pad=0.32, ranksep=0.92, nodesep=0.38,
+        fontname="DejaVu Sans", fontcolor="#14213D", fontsize=20, labelloc=t, dpi=150,
+        label="Student Attendance Database"
+    ];
+    node [shape=plain, fontname="DejaVu Sans", fontsize=12, fontcolor="#14213D"];
+    edge [color="#395875", fontcolor="#2F4A65", fontname="DejaVu Sans", fontsize=10, penwidth=1.4];
+
+    Students [label=<
+        <TABLE BORDER="1" CELLBORDER="0" CELLPADDING="7" COLOR="#BAD0E4" BGCOLOR="#FFFFFF">
+            <TR><TD COLSPAN="2" BGCOLOR="#174A73"><FONT COLOR="#FFFFFF"><B>Students</B></FONT></TD></TR>
+            <TR><TD><B>PK</B></TD><TD ALIGN="LEFT">StudentID</TD></TR>
+            <TR><TD>UQ</TD><TD ALIGN="LEFT">StudentCode</TD></TR>
+            <TR><TD></TD><TD ALIGN="LEFT">FullName</TD></TR>
+            <TR><TD></TD><TD ALIGN="LEFT">Email</TD></TR>
+            <TR><TD></TD><TD ALIGN="LEFT">Department</TD></TR>
+            <TR><TD></TD><TD ALIGN="LEFT">Level</TD></TR>
+        </TABLE>
+    >];
+
+    Courses [label=<
+        <TABLE BORDER="1" CELLBORDER="0" CELLPADDING="7" COLOR="#BAD0E4" BGCOLOR="#FFFFFF">
+            <TR><TD COLSPAN="2" BGCOLOR="#174A73"><FONT COLOR="#FFFFFF"><B>Courses</B></FONT></TD></TR>
+            <TR><TD><B>PK</B></TD><TD ALIGN="LEFT">CourseID</TD></TR>
+            <TR><TD>UQ</TD><TD ALIGN="LEFT">CourseCode</TD></TR>
+            <TR><TD></TD><TD ALIGN="LEFT">CourseName</TD></TR>
+            <TR><TD></TD><TD ALIGN="LEFT">InstructorName</TD></TR>
+        </TABLE>
+    >];
+
+    Enrollments [label=<
+        <TABLE BORDER="1" CELLBORDER="0" CELLPADDING="7" COLOR="#A8CEC7" BGCOLOR="#FFFFFF">
+            <TR><TD COLSPAN="2" BGCOLOR="#126760"><FONT COLOR="#FFFFFF"><B>Enrollments</B></FONT></TD></TR>
+            <TR><TD><B>PK</B></TD><TD ALIGN="LEFT">EnrollmentID</TD></TR>
+            <TR><TD>FK</TD><TD ALIGN="LEFT">StudentID</TD></TR>
+            <TR><TD>FK</TD><TD ALIGN="LEFT">CourseID</TD></TR>
+            <TR><TD></TD><TD ALIGN="LEFT">IsActive</TD></TR>
+            <TR><TD COLSPAN="2" ALIGN="LEFT" BGCOLOR="#EAF6F4">UQ (StudentID, CourseID)</TD></TR>
+        </TABLE>
+    >];
+
+    Attendance [label=<
+        <TABLE BORDER="1" CELLBORDER="0" CELLPADDING="7" COLOR="#C4C7E8" BGCOLOR="#FFFFFF">
+            <TR><TD COLSPAN="2" BGCOLOR="#41477B"><FONT COLOR="#FFFFFF"><B>Attendance</B></FONT></TD></TR>
+            <TR><TD><B>PK</B></TD><TD ALIGN="LEFT">AttendanceID</TD></TR>
+            <TR><TD>FK</TD><TD ALIGN="LEFT">(StudentID, CourseID)</TD></TR>
+            <TR><TD></TD><TD ALIGN="LEFT">AttendanceDate</TD></TR>
+            <TR><TD></TD><TD ALIGN="LEFT">Status</TD></TR>
+            <TR><TD COLSPAN="2" ALIGN="LEFT" BGCOLOR="#EFF0FA">UQ (StudentID, CourseID, AttendanceDate)</TD></TR>
+            <TR><TD COLSPAN="2" ALIGN="LEFT" BGCOLOR="#EFF0FA">Status: Present, Absent, Late</TD></TR>
+        </TABLE>
+    >];
+
+    { rank=same; Students; Courses; }
+    Students -> Enrollments [dir=both, arrowtail=tee, arrowhead=crowodot, label="1 to 0..*"];
+    Courses -> Enrollments [dir=both, arrowtail=tee, arrowhead=crowodot, label="1 to 0..*"];
+    Enrollments -> Attendance [dir=both, arrowtail=tee, arrowhead=crowodot, label="1 to 0..*"];
+}
