@@ -1,473 +1,238 @@
-import { useEffect, useMemo, useState } from "react";
-import "./App.css";
+import { useEffect, useState } from 'react';
+import './App.css';
 
-const INITIAL_STUDENTS = [
-  {
-    id: "STU-2026-001",
-    fullName: "Ahmed Hassan Mahmoud",
-    email: "ahmed.hassan@student.edu.eg",
-    department: "Computer Science",
-    level: "Level 3",
-    gpa: 3.65,
-    attendanceRate: 94,
-    status: "Active",
-  },
-  {
-    id: "STU-2026-002",
-    fullName: "Mariam Khaled Samir",
-    email: "mariam.khaled@student.edu.eg",
-    department: "Information Systems",
-    level: "Level 2",
-    gpa: 3.82,
-    attendanceRate: 98,
-    status: "Active",
-  },
-  {
-    id: "STU-2026-003",
-    fullName: "Youssef Tarek Ali",
-    email: "youssef.tarek@student.edu.eg",
-    department: "Artificial Intelligence",
-    level: "Level 4",
-    gpa: 3.21,
-    attendanceRate: 81,
-    status: "At Risk",
-  },
-  {
-    id: "STU-2026-004",
-    fullName: "Salma Mohamed Nabil",
-    email: "salma.mohamed@student.edu.eg",
-    department: "Software Engineering",
-    level: "Level 3",
-    gpa: 3.91,
-    attendanceRate: 96,
-    status: "Active",
-  },
-];
+const EMPTY_FORM = { studentCode: '', fullName: '', email: '', department: '', level: '' };
+const API_URL = '/api/students';
 
-const EMPTY_FORM = {
-  id: "",
-  fullName: "",
-  email: "",
-  department: "Computer Science",
-  level: "Level 1",
-  gpa: "3.50",
-  attendanceRate: "90",
-  status: "Active",
-};
+async function requestStudents(path = '', options) {
+  let response;
+  try {
+    response = await fetch(API_URL + path, options);
+  } catch {
+    throw new Error('تعذّر الاتصال بالسيرفر. تأكد إن الـBackend شغّال.');
+  }
 
-// لو عندك Backend API جاهز، غيّر الرابط ده وخلي USE_LIVE_API = true
-const API_BASE_URL = "http://localhost:5000/api/students";
-const USE_LIVE_API = false;
+  if (response.status === 204) return;
+  const data = await response.json().catch(() => null);
+  if (!response.ok || data === null) {
+    throw new Error(data?.error || 'تعذّر إكمال الطلب. تأكد إن الـBackend شغّال ومتصل بقاعدة البيانات.');
+  }
+  return data;
+}
 
-export default function App() {
-  const [students, setStudents] = useState(INITIAL_STUDENTS);
-  const [formData, setFormData] = useState(EMPTY_FORM);
+function App() {
+  const [students, setStudents] = useState([]);
+  const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [departmentFilter, setDepartmentFilter] = useState("All");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
-  const [toastMsg, setToastMsg] = useState("");
-
-  const showToast = (msg) => {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(""), 3000);
-  };
+  const [search, setSearch] = useState('');
+  const [department, setDepartment] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [reload, setReload] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState(null);
 
   useEffect(() => {
-    if (!USE_LIVE_API) return;
-    const fetchStudents = async () => {
-      setLoading(true);
-      setErrorMsg("");
-      try {
-        const res = await fetch(API_BASE_URL);
-        if (!res.ok) throw new Error("فشل تحميل بيانات الطلاب من السيرفر");
-        const data = await res.json();
-        setStudents(Array.isArray(data) ? data : []);
-      } catch (err) {
-        setErrorMsg(err.message || "حدث خطأ أثناء الاتصال بالباك إند");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchStudents();
-  }, []);
+    const controller = new AbortController();
+    requestStudents('', { signal: controller.signal })
+      .then((rows) => {
+        if (!controller.signal.aborted) setStudents(rows);
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) setLoadError(error.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [reload]);
 
-  const filteredStudents = useMemo(() => {
-    return students.filter((st) => {
-      const q = searchTerm.trim().toLowerCase();
-      const matchesSearch =
-        !q ||
-        st.id.toLowerCase().includes(q) ||
-        st.fullName.toLowerCase().includes(q) ||
-        st.email.toLowerCase().includes(q);
-      const matchesDept =
-        departmentFilter === "All" || st.department === departmentFilter;
-      const matchesStatus =
-        statusFilter === "All" || st.status === statusFilter;
-      return matchesSearch && matchesDept && matchesStatus;
-    });
-  }, [students, searchTerm, departmentFilter, statusFilter]);
+  const departments = [...new Set(students.map((student) => student.department).filter(Boolean))].sort();
+  const selectedDepartment = departments.includes(department) ? department : '';
+  const query = search.trim().toLowerCase();
+  const results = students.filter((student) =>
+    (!selectedDepartment || student.department === selectedDepartment) &&
+    [student.studentCode, student.fullName, student.email].some((value) =>
+      (value ?? '').toLowerCase().includes(query))
+  ).sort((a, b) => a.fullName.localeCompare(b.fullName) || a.id - b.id);
 
-  const stats = useMemo(() => {
-    const total = students.length;
-    const active = students.filter((s) => s.status === "Active").length;
-    const avgGpa =
-      total > 0
-        ? (
-            students.reduce((acc, s) => acc + Number(s.gpa || 0), 0) / total
-          ).toFixed(2)
-        : "0.00";
-    const avgAttendance =
-      total > 0
-        ? Math.round(
-            students.reduce((acc, s) => acc + Number(s.attendanceRate || 0), 0) /
-              total
-          )
-        : 0;
-    return { total, active, avgGpa, avgAttendance };
-  }, [students]);
+  function changeField(event) {
+    const { name, value } = event.target;
+    setForm((previous) => ({ ...previous, [name]: value }));
+  }
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setErrorMsg("");
-
-    if (!formData.fullName.trim() || !formData.email.trim()) {
-      setErrorMsg("من فضلك أدخل اسم الطالب والبريد الإلكتروني.");
-      return;
-    }
-
-    const payload = {
-      id:
-        formData.id.trim() ||
-        `STU-2026-${String(Math.floor(100 + Math.random() * 900))}`,
-      fullName: formData.fullName.trim(),
-      email: formData.email.trim(),
-      department: formData.department,
-      level: formData.level,
-      gpa: Number(formData.gpa) || 0,
-      attendanceRate: Math.min(100, Math.max(0, Number(formData.attendanceRate) || 0)),
-      status: formData.status,
-    };
-
-    try {
-      if (USE_LIVE_API) {
-        const url = editingId ? `${API_BASE_URL}/${editingId}` : API_BASE_URL;
-        const method = editingId ? "PUT" : "POST";
-        const res = await fetch(url, {
-          method,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        if (!res.ok) throw new Error("تعذر حفظ بيانات الطالب في قاعدة البيانات");
-      }
-
-      if (editingId) {
-        setStudents((prev) =>
-          prev.map((item) => (item.id === editingId ? payload : item))
-        );
-        showToast("تم تحديث بيانات الطالب بنجاح");
-      } else {
-        setStudents((prev) => [payload, ...prev]);
-        showToast("تمت إضافة الطالب بنجاح");
-      }
-
-      setEditingId(null);
-      setFormData(EMPTY_FORM);
-    } catch (err) {
-      setErrorMsg(err.message || "حصل خطأ أثناء الحفظ");
-    }
-  };
-
-  const handleEdit = (student) => {
-    setEditingId(student.id);
-    setFormData({
-      id: student.id,
-      fullName: student.fullName,
-      email: student.email,
-      department: student.department,
-      level: student.level,
-      gpa: String(student.gpa),
-      attendanceRate: String(student.attendanceRate),
-      status: student.status,
-    });
-    setErrorMsg("");
-  };
-
-  const handleCancelEdit = () => {
+  function resetForm() {
     setEditingId(null);
-    setFormData(EMPTY_FORM);
-    setErrorMsg("");
-  };
+    setForm(EMPTY_FORM);
+  }
 
-  const handleDelete = async (id) => {
+  function editStudent(student) {
+    setMessage(null);
+    setEditingId(student.id);
+    setForm({
+      studentCode: student.studentCode,
+      fullName: student.fullName,
+      email: student.email ?? '',
+      department: student.department ?? '',
+      level: student.level == null ? '' : String(student.level),
+    });
+  }
+
+  async function saveStudent(event) {
+    event.preventDefault();
+    if (saving) return;
+    setSaving(true);
+    setMessage(null);
+
     try {
-      if (USE_LIVE_API) {
-        const res = await fetch(`${API_BASE_URL}/${id}`, { method: "DELETE" });
-        if (!res.ok) throw new Error("تعذر حذف الطالب من السيرفر");
-      }
-      setStudents((prev) => prev.filter((item) => item.id !== id));
-      if (editingId === id) handleCancelEdit();
-      showToast("تم حذف سجل الطالب");
-    } catch (err) {
-      setErrorMsg(err.message || "حصل خطأ أثناء الحذف");
+      const student = await requestStudents(editingId === null ? '' : '/' + editingId, {
+        method: editingId === null ? 'POST' : 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, level: form.level === '' ? null : Number(form.level) }),
+      });
+      setStudents((previous) => editingId === null
+        ? [...previous, student]
+        : previous.map((item) => item.id === student.id ? student : item));
+      setDepartment('');
+      setSearch('');
+      setMessage({ text: editingId === null ? 'تمت إضافة الطالب.' : 'تم حفظ التعديلات.' });
+      resetForm();
+    } catch (error) {
+      setMessage({ error: true, text: error.message });
+    } finally {
+      setSaving(false);
     }
-  };
+  }
+
+  async function deleteStudent(student) {
+    if (saving || !window.confirm('حذف الطالب ' + student.fullName + '؟')) return;
+    setSaving(true);
+    setMessage(null);
+
+    try {
+      await requestStudents('/' + student.id, { method: 'DELETE' });
+      setStudents((previous) => previous.filter((item) => item.id !== student.id));
+      if (editingId === student.id) resetForm();
+      setMessage({ text: 'تم حذف الطالب.' });
+    } catch (error) {
+      setMessage({ error: true, text: error.message });
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" dir="rtl">
       <header className="topbar">
         <div>
-          <span className="badge">T6 • Student Management</span>
-          <h1>Student Management Dashboard</h1>
-          <p className="subtitle">
-            إدارة سجلات الطلاب، المعدل التراكمي، ونسب الحضور ضمن نظام قاعدة البيانات
-          </p>
+          <h1>إدارة الطلبة</h1>
+          {!loading && !loadError && <p className="subtitle">إجمالي الطلبة: {students.length}</p>}
         </div>
-        {toastMsg && <div className="toast">{toastMsg}</div>}
       </header>
 
-      <section className="stats-grid">
-        <div className="stat-card">
-          <span>إجمالي الطلاب</span>
-          <strong>{stats.total}</strong>
-        </div>
-        <div className="stat-card">
-          <span>الطلاب النشطون</span>
-          <strong>{stats.active}</strong>
-        </div>
-        <div className="stat-card">
-          <span>متوسط GPA</span>
-          <strong>{stats.avgGpa}</strong>
-        </div>
-        <div className="stat-card">
-          <span>متوسط الحضور</span>
-          <strong>{stats.avgAttendance}%</strong>
-        </div>
-      </section>
-
-      {errorMsg && <div className="alert-error">{errorMsg}</div>}
+      {message && (
+        <p className={message.error ? 'alert-error' : 'toast'} role={message.error ? 'alert' : 'status'} dir="auto">
+          {message.text}
+        </p>
+      )}
 
       <main className="workspace-grid">
-        <section className="card form-card">
-          <h2>{editingId ? "تعديل بيانات طالب" : "إضافة طالب جديد"}</h2>
-          <form onSubmit={handleSubmit} className="student-form">
-            <label>
-              كود الطالب (Student ID)
-              <input
-                type="text"
-                name="id"
-                placeholder="مثال: STU-2026-005"
-                value={formData.id}
-                onChange={handleChange}
-                disabled={Boolean(editingId)}
-              />
-            </label>
-
-            <label>
-              الاسم الكامل *
-              <input
-                type="text"
-                name="fullName"
-                placeholder="اكتب اسم الطالب"
-                value={formData.fullName}
-                onChange={handleChange}
-                required
-              />
-            </label>
-
-            <label>
-              البريد الإلكتروني *
-              <input
-                type="email"
-                name="email"
-                placeholder="student@domain.edu"
-                value={formData.email}
-                onChange={handleChange}
-                required
-              />
-            </label>
-
-            <div className="two-cols">
+        <section className="card">
+          <h2>{editingId === null ? 'إضافة طالب' : 'تعديل بيانات الطالب'}</h2>
+          <form className="student-form" onSubmit={saveStudent}>
+            <fieldset disabled={loading || Boolean(loadError) || saving}>
               <label>
-                القسم / التخصص
-                <select
-                  name="department"
-                  value={formData.department}
-                  onChange={handleChange}
-                >
-                  <option value="Computer Science">Computer Science</option>
-                  <option value="Information Systems">Information Systems</option>
-                  <option value="Artificial Intelligence">Artificial Intelligence</option>
-                  <option value="Software Engineering">Software Engineering</option>
-                </select>
+                كود الطالب
+                <input name="studentCode" value={form.studentCode} onChange={changeField} maxLength={20} required dir="ltr" />
               </label>
-
               <label>
-                المستوى الدراسي
-                <select
-                  name="level"
-                  value={formData.level}
-                  onChange={handleChange}
-                >
-                  <option value="Level 1">Level 1</option>
-                  <option value="Level 2">Level 2</option>
-                  <option value="Level 3">Level 3</option>
-                  <option value="Level 4">Level 4</option>
-                </select>
+                الاسم الكامل
+                <input name="fullName" value={form.fullName} onChange={changeField} maxLength={120} required dir="auto" />
               </label>
-            </div>
-
-            <div className="two-cols">
               <label>
-                GPA
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="4"
-                  name="gpa"
-                  value={formData.gpa}
-                  onChange={handleChange}
-                />
+                البريد الإلكتروني
+                <input type="email" name="email" value={form.email} onChange={changeField} maxLength={254} dir="ltr" />
               </label>
-
-              <label>
-                نسبة الحضور (%)
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  name="attendanceRate"
-                  value={formData.attendanceRate}
-                  onChange={handleChange}
-                />
-              </label>
-            </div>
-
-            <label>
-              الحالة الأكاديمية
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-              >
-                <option value="Active">Active</option>
-                <option value="At Risk">At Risk</option>
-                <option value="Suspended">Suspended</option>
-              </select>
-            </label>
-
-            <div className="form-actions">
-              <button type="submit" className="btn-primary">
-                {editingId ? "حفظ التعديلات" : "إضافة الطالب"}
-              </button>
-              {editingId && (
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={handleCancelEdit}
-                >
-                  إلغاء
+              <div className="two-cols">
+                <label>
+                  القسم
+                  <input name="department" value={form.department} onChange={changeField} maxLength={100} dir="auto" />
+                </label>
+                <label>
+                  المستوى
+                  <input type="number" name="level" value={form.level} onChange={changeField} min={1} max={255} step={1} />
+                </label>
+              </div>
+              <div className="form-actions">
+                <button className="btn-primary" type="submit">
+                  {editingId === null ? 'إضافة الطالب' : 'حفظ التعديلات'}
                 </button>
-              )}
-            </div>
+                {editingId !== null && (
+                  <button className="btn-secondary" type="button" onClick={() => { resetForm(); setMessage(null); }}>
+                    إلغاء
+                  </button>
+                )}
+              </div>
+            </fieldset>
           </form>
         </section>
 
-        <section className="card table-card">
+        <section className="card table-card" aria-label="قائمة الطلبة">
           <div className="toolbar">
             <input
-              type="text"
-              className="search-input"
-              placeholder="ابحث بالاسم أو الكود أو الإيميل..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              type="search"
+              aria-label="ابحث عن طالب"
+              placeholder="ابحث بالاسم أو الكود أو الإيميل"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              disabled={loading || Boolean(loadError)}
             />
-
             <select
-              value={departmentFilter}
-              onChange={(e) => setDepartmentFilter(e.target.value)}
+              aria-label="فلترة حسب القسم"
+              value={selectedDepartment}
+              onChange={(event) => setDepartment(event.target.value)}
+              disabled={loading || Boolean(loadError)}
             >
-              <option value="All">كل الأقسام</option>
-              <option value="Computer Science">Computer Science</option>
-              <option value="Information Systems">Information Systems</option>
-              <option value="Artificial Intelligence">Artificial Intelligence</option>
-              <option value="Software Engineering">Software Engineering</option>
-            </select>
-
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="All">كل الحالات</option>
-              <option value="Active">Active</option>
-              <option value="At Risk">At Risk</option>
-              <option value="Suspended">Suspended</option>
+              <option value="">كل الأقسام</option>
+              {departments.map((name) => <option key={name}>{name}</option>)}
             </select>
           </div>
 
-          {loading ? (
-            <p className="empty-state">جاري تحميل البيانات...</p>
-          ) : filteredStudents.length === 0 ? (
-            <p className="empty-state">لا توجد نتائج مطابقة للبحث أو الفلترة.</p>
-          ) : (
+          {loading && <p role="status" className="empty-state">جاري تحميل الطلبة…</p>}
+          {!loading && loadError && (
+            <div role="alert" className="alert-error">
+              <p>{loadError}</p>
+              <button className="btn-secondary" type="button" onClick={() => {
+                setLoadError('');
+                setLoading(true);
+                setReload((previous) => previous + 1);
+              }}>إعادة المحاولة</button>
+            </div>
+          )}
+          {!loading && !loadError && results.length === 0 && (
+            <p className="empty-state">{students.length ? 'مفيش طلبة مطابقين للبحث.' : 'مفيش طلبة مسجّلين.'}</p>
+          )}
+          {!loading && !loadError && results.length > 0 && (
             <div className="table-wrap">
               <table>
                 <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>الاسم</th>
-                    <th>القسم</th>
-                    <th>المستوى</th>
-                    <th>GPA</th>
-                    <th>الحضور</th>
-                    <th>الحالة</th>
-                    <th>إجراءات</th>
-                  </tr>
+                  <tr><th>الكود</th><th>الطالب</th><th>القسم</th><th>المستوى</th><th>إجراءات</th></tr>
                 </thead>
                 <tbody>
-                  {filteredStudents.map((st) => (
-                    <tr key={st.id}>
-                      <td className="mono">{st.id}</td>
+                  {results.map((student) => (
+                    <tr key={student.id}>
+                      <td className="mono"><bdi>{student.studentCode}</bdi></td>
                       <td>
-                        <div className="student-name">{st.fullName}</div>
-                        <div className="student-email">{st.email}</div>
+                        <div className="student-name" dir="auto">{student.fullName}</div>
+                        {student.email && <div className="student-email" dir="ltr">{student.email}</div>}
                       </td>
-                      <td>{st.department}</td>
-                      <td>{st.level}</td>
-                      <td>{Number(st.gpa).toFixed(2)}</td>
-                      <td>{st.attendanceRate}%</td>
+                      <td dir="auto">{student.department || '—'}</td>
+                      <td>{student.level ?? '—'}</td>
                       <td>
-                        <span
-                          className={`status-pill status-${st.status
-                            .toLowerCase()
-                            .replace(/\s+/g, "-")}`}
-                        >
-                          {st.status}
-                        </span>
-                      </td>
-                      <td className="actions-cell">
-                        <button
-                          type="button"
-                          className="btn-edit"
-                          onClick={() => handleEdit(st)}
-                        >
-                          تعديل
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-delete"
-                          onClick={() => handleDelete(st.id)}
-                        >
-                          حذف
-                        </button>
+                        <div className="actions-cell">
+                          <button type="button" className="btn-edit" onClick={() => editStudent(student)} disabled={saving}>تعديل</button>
+                          <button type="button" className="btn-delete" onClick={() => deleteStudent(student)} disabled={saving}>حذف</button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -480,3 +245,5 @@ export default function App() {
     </div>
   );
 }
+
+export default App;
