@@ -42,7 +42,7 @@ The schema script supports reruns on the Phase 1 schema. The seed script adds mi
 - Attendance references the enrollment's student and course pair, so deactivation keeps historical attendance and takes the student off the current roster. The database rejects attendance saves against an inactive enrollment.
 - The database enforces the unique attendance key. The attendance API will use that key to update an existing record and return the user-facing message.
 
-## Run the student management app
+## Run the app
 
 Use Node.js 22.12+ (22.x) or Node.js 24+, and complete the Phase 1 database setup. If the database and seed data already exist, go straight to the commands below.
 
@@ -72,6 +72,12 @@ npm run dev
 ```
 
 Open [Student Management](http://localhost:5173). Read, search, add, edit, and delete students here. A newly added student should still appear after a browser refresh. To test restricted deletion, try deleting one of the demo students already enrolled in courses. If the API port differs from `3001`, set `API_TARGET` in `client/.env` (for example, `API_TARGET=http://127.0.0.1:3002`).
+
+## Courses and enrollments
+
+Use **المواد** to view, add, edit, and delete courses. SQL Server blocks deletion when a course has enrollment or attendance records. Use **التسجيل في المواد** to select a course, view its active roster, and enroll or withdraw a student. Re-enrolling a withdrawn student reactivates the same enrollment. The original attendance records remain available in SQL Server.
+
+The existing Phase 1 database supports this part of the app. If you already have a working `server/.env`, keep using it. After updating the code, restart the API and the client.
 
 ## Project structure
 

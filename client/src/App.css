@@ -223,3 +223,40 @@ button:disabled {
 .alert-error p {
   margin-top: 0;
 }
+
+.app-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #dbe4f0;
+}
+
+.app-nav a {
+  padding: 10px 14px;
+  border-bottom: 2px solid transparent;
+  color: #334155;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.app-nav a:hover,
+.app-nav a[aria-current="page"] {
+  color: #1d4ed8;
+  border-bottom-color: #2563eb;
+}
+
+.course-picker {
+  max-width: 420px;
+  margin-bottom: 18px;
+}
+
+.student-form select {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+}
