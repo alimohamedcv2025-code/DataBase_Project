@@ -71,7 +71,7 @@ npm ci
 npm run dev
 ```
 
-Open [Student Management](http://localhost:5173). Read, search, add, edit, and delete students here. A newly added student should still appear after a browser refresh. To test restricted deletion, try deleting one of the demo students already enrolled in courses. If the API port differs from `3001`, set `API_TARGET` in `client/.env` (for example, `API_TARGET=http://127.0.0.1:3002`).
+Open [the attendance app](http://localhost:5173). Start on the student list, or use the navigation to open the dashboard, courses, enrollments, attendance, or reports. A newly added student should still appear after a browser refresh. To test restricted deletion, try deleting one of the demo students already enrolled in courses. If the API port differs from `3001`, set `API_TARGET` in `client/.env` (for example, `API_TARGET=http://127.0.0.1:3002`).
 
 ## Courses and enrollments
 
@@ -79,17 +79,28 @@ Use **المواد** to view, add, edit, and delete courses. SQL Server blocks d
 
 The existing Phase 1 database supports this part of the app. If you already have a working `server/.env`, keep using it. After updating the code, restart the API and the client.
 
+## Attendance and reports
+
+1. Open **تسجيل الحضور**. Select a course and date, then click **عرض الكشف**.
+2. Pick **حاضر**, **غائب**, or **متأخر** for the students you want to mark. Click **حفظ الحضور**. A blank status stays unrecorded. If you change a saved status, the same attendance row is updated.
+3. Open **السجل والتقارير**, choose any combination of student, course, and inclusive date range, then click **عرض التقرير**. The summary uses all matching records across pages. The three percentages are calculated separately from all recorded statuses, and unrecorded attendance is excluded.
+4. If a student withdraws, the current roster hides that student. History and reports still show their existing attendance records.
+
+[SQL query examples](database/03_queries.sql) reproduce student search, a dated roster, filtered history, and summary calculations in SSMS. They are read-only and optional for running the web app. The API uses `OPENJSON` for attendance batches and requires SQL Server database compatibility level 130 or later. The Phase 1 script uses the server default when it creates the database.
+
+See [the end-to-end test checklist](tests/README.md) for a complete local demo.
+
 ## Project structure
 
 ```text
  student-attendance-system/
- ├── database/      # Schema and seed; report queries will follow
+ ├── database/      # Schema, seed data, and query examples
  ├── server/        # Node + Express API
  ├── client/        # React (Vite) frontend
  ├── docs/
  │   ├── PRD_Student_Attendance_System.md
  │   ├── TECH_DECISIONS.md
  │   └── ERD.png
- ├── tests/         # Phase 1 roster verification
+ ├── tests/         # Roster verification and demo checklist
  └── README.md
 ```
