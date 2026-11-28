@@ -223,3 +223,121 @@ button:disabled {
 .alert-error p {
   margin-top: 0;
 }
+
+.app-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #dbe4f0;
+}
+
+.app-nav a {
+  padding: 10px 14px;
+  border-bottom: 2px solid transparent;
+  color: #334155;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.app-nav a:hover,
+.app-nav a[aria-current="page"] {
+  color: #1d4ed8;
+  border-bottom-color: #2563eb;
+}
+
+.course-picker {
+  max-width: 420px;
+  margin-bottom: 18px;
+}
+
+.student-form select {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+}
+
+.filters-card {
+  margin-bottom: 18px;
+}
+
+.filter-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px;
+}
+
+.filter-fields label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  flex: 1 1 150px;
+  font-size: 14px;
+}
+
+.filter-fields input,
+.filter-fields select,
+.status-select {
+  max-width: 100%;
+  padding: 9px 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+}
+
+.filter-fields .btn-primary,
+.record-actions .btn-primary {
+  flex: none;
+}
+
+.record-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 14px;
+}
+
+.sheet-selection {
+  margin: 0 0 12px;
+  color: #334155;
+}
+
+.dashboard-grid,
+.report-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.dashboard-link {
+  color: #1d4ed8;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.dashboard-link:hover {
+  border-color: #2563eb;
+}
+
+.report-summary .card {
+  display: grid;
+  gap: 6px;
+}
+
+.report-summary strong {
+  font-size: 24px;
+  justify-self: start;
+}
+
+.report-summary span[dir="ltr"] {
+  justify-self: start;
+}

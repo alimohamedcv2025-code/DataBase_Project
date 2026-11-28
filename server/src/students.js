@@ -1,4 +1,5 @@
 const express = require('express');
+const { invalid, validateText, positiveId } = require('./validation');
 
 const fields = [
   ['StudentID', 'id'],
@@ -11,19 +12,6 @@ const fields = [
 
 const columns = fields.map(([column, alias]) => `${column} AS ${alias}`).join(', ');
 const inserted = fields.map(([column, alias]) => `inserted.${column} AS ${alias}`).join(', ');
-
-function invalid(message, status = 400) {
-  return Object.assign(new Error(message), { status });
-}
-
-function validateText(value, label, maxLength, required = false) {
-  if (value == null && !required) return null;
-  if (typeof value !== 'string') throw invalid(`${label} must be text.`);
-  const text = value.trim();
-  if (required && !text) throw invalid(`${label} is required.`);
-  if (text.length > maxLength) throw invalid(`${label} must be at most ${maxLength} characters.`);
-  return text || null;
-}
 
 function studentData(body) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
@@ -42,14 +30,6 @@ function studentData(body) {
     throw invalid('Level must be a whole number from 1 to 255.');
   }
   return { studentCode, fullName, email, department, level };
-}
-
-function studentId(value) {
-  const id = Number(value);
-  if (!/^\d+$/.test(value) || id < 1 || id > 2147483647) {
-    throw invalid('Student ID must be a positive integer.');
-  }
-  return id;
 }
 
 function writeStudent(request, sql, data) {
@@ -88,7 +68,7 @@ function studentRouter(pool, sql) {
   });
 
   router.put('/:id', async (req, res) => {
-    const id = studentId(req.params.id);
+    const id = positiveId(req.params.id, 'Student ID');
     const request = writeStudent(pool.request(), sql, studentData(req.body));
     const result = await request.input('id', sql.Int, id).query(`
       UPDATE dbo.Students
@@ -102,7 +82,7 @@ function studentRouter(pool, sql) {
   });
 
   router.delete('/:id', async (req, res) => {
-    const id = studentId(req.params.id);
+    const id = positiveId(req.params.id, 'Student ID');
     const result = await pool.request().input('id', sql.Int, id).query(`
       DELETE FROM dbo.Students
       OUTPUT deleted.StudentID AS id

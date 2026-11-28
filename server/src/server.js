@@ -1,12 +1,15 @@
 const express = require('express');
 const { connectDatabase, integerSetting } = require('./database');
 const { studentRouter } = require('./students');
+const { courseRouter } = require('./courses');
+const { attendanceRouter } = require('./attendance');
 
 async function start() {
   const port = integerSetting('PORT', 3001);
   const { pool, sql } = await connectDatabase();
   const app = express();
   app.disable('x-powered-by');
+  app.use('/api/attendance', express.json({ limit: '128kb' }), attendanceRouter(pool, sql));
   app.use(express.json({ limit: '16kb' }));
 
   app.get('/api/health', async (req, res) => {
@@ -14,6 +17,7 @@ async function start() {
     res.json({ status: 'ok', database: 'connected' });
   });
   app.use('/api/students', studentRouter(pool, sql));
+  app.use('/api/courses', courseRouter(pool, sql));
   app.use((req, res) => res.status(404).json({ error: 'Route not found.' }));
   app.use((error, req, res, next) => {
     if (res.headersSent) return next(error);
