@@ -42,13 +42,44 @@ The schema script supports reruns on the Phase 1 schema. The seed script adds mi
 - Attendance references the enrollment's student and course pair, so deactivation keeps historical attendance and takes the student off the current roster. The database rejects attendance saves against an inactive enrollment.
 - The database enforces the unique attendance key. The attendance API will use that key to update an existing record and return the user-facing message.
 
-## Planned structure
+## Run the student management app
+
+Use Node.js 22.12+ (22.x) or Node.js 24+, and complete the Phase 1 database setup. If the database and seed data already exist, go straight to the commands below.
+
+### Start the API (PowerShell)
+
+For Windows Authentication, install Microsoft ODBC Driver 18 for SQL Server and open PowerShell under the same Windows account you use in SSMS.
+
+```powershell
+cd server
+Copy-Item .env.example .env
+npm ci
+npm start
+```
+
+For a local default SQL Server instance, the example uses `DB_SERVER=localhost`. For a named instance, set `DB_INSTANCE` (for example, `SQLEXPRESS`). To connect to a fixed TCP port, set `DB_PORT` instead of `DB_INSTANCE`. For SQL Server Authentication, set `DB_AUTH=sql`, `DB_USER`, and `DB_PASSWORD` in `.env`, and use the instance's TCP settings.
+
+Open [API health](http://localhost:3001/api/health) to verify the SQL Server connection. [Student records](http://localhost:3001/api/students) returns the student list as JSON.
+
+### Start React (a second PowerShell window)
+
+From the repository root, run:
+
+```powershell
+cd client
+npm ci
+npm run dev
+```
+
+Open [Student Management](http://localhost:5173). Read, search, add, edit, and delete students here. A newly added student should still appear after a browser refresh. To test restricted deletion, try deleting one of the demo students already enrolled in courses. If the API port differs from `3001`, set `API_TARGET` in `client/.env` (for example, `API_TARGET=http://127.0.0.1:3002`).
+
+## Project structure
 
 ```text
  student-attendance-system/
  ├── database/      # Schema and seed; report queries will follow
- ├── server/        # Node + Express API (planned)
- ├── client/        # React (Vite) frontend (planned)
+ ├── server/        # Node + Express API
+ ├── client/        # React (Vite) frontend
  ├── docs/
  │   ├── PRD_Student_Attendance_System.md
  │   ├── TECH_DECISIONS.md
